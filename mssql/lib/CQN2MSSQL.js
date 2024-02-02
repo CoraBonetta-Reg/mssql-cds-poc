@@ -16,13 +16,13 @@ class CQN2MSSQL extends SQLService.CQN2SQL {
         let columns = this.SELECT_columns(q)
         let sql = `SELECT`
         if (distinct) sql += ` DISTINCT`
+        if (one) sql += ` TOP 1`
         if (!_empty(columns)) sql += ` ${columns}`
         if (!_empty(from)) sql += ` FROM ${this.from(from)}`
         if (!_empty(where)) sql += ` WHERE ${this.where(where)}`
         if (!_empty(groupBy)) sql += ` GROUP BY ${this.groupBy(groupBy)}`
         if (!_empty(having)) sql += ` HAVING ${this.having(having)}`
         if (!_empty(orderBy)) sql += ` ORDER BY ${this.orderBy(orderBy, localized)}`
-        if (one) limit = Object.assign({}, limit, { rows: { val: 1 } })
         if (limit) sql += ` ${_limit(limit)}`
         // Expand cannot work without an inferred query
         if (expand) {
@@ -66,6 +66,29 @@ class CQN2MSSQL extends SQLService.CQN2SQL {
 
         return `SELECT ${SELECT.one || SELECT.expand === 'root' ? obj : `json_group_array(${obj.includes('json_merge') ? `json_insert(${obj})` : obj})`} as _json_ FROM (${sql}) as r`
     }
+
+    // override value rendering for parameters in statement
+    val({ val, param }) {
+        switch (typeof val) {
+          case 'function': throw new Error('Function values not supported.')
+          case 'undefined': return 'NULL'
+          case 'boolean': return `${val}`
+          case 'number': return `${val}` // REVISIT for HANA
+          case 'object':
+            if (val === null) return 'NULL'
+            if (val instanceof Date) return `'${val.toISOString()}'`
+            if (val instanceof Readable); // go on with default below
+            else if (Buffer.isBuffer(val)) val = val.toString('base64')
+            else if (is_regexp(val)) val = val.source
+            else val = JSON.stringify(val)
+          case 'string': // eslint-disable-line no-fallthrough
+        }
+        if (!this.values || param === false) 
+            return this.string(val)
+
+        var index = this.values.push(val)
+        return `@p${index}`
+      }
 }
 
 module.exports = CQN2MSSQL;

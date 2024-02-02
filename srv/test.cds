@@ -1,5 +1,6 @@
 using { db } from '../db/db';
 
+@rest
 service TestService {
-    entity Customer as projection on db.Customer;
+    entity Customer as select from db.Customer;
 }

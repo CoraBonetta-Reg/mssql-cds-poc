@@ -32,35 +32,49 @@ class MSSQLService extends SQLService {
   async prepare(sqlStatement) {
     // TODO: all logic for mssql goes here
     try {
-      const stmt = new sql.PreparedStatement()
-      await stmt.prepare(sqlStatement)
-
       return {
-        run: (..._) => this._run(stmt, ..._),
-        get: (..._) => this._get(stmt,..._),
-        all: (..._) => this._all(stmt,..._),
-        stream: (..._) => this._stream(stmt, ..._),
+        run: (..._) => this._run(sqlStatement, ..._),
+        get: (..._) => this._get(sqlStatement,..._),
+        all: (..._) => this._all(sqlStatement,..._),
+        stream: (..._) => this._stream(sqlStatement, ..._),
       }
     } catch (e) {
-      e.message += ' in:\n' + (e.sql = sql)
+      e.message += ' in:\n' + (e.sql = sqlStatement)
       throw e
     }
   }
 
-  async _run(stmt, binding_params) {
+  async _run(sqlStatement, binding_params) {
     // TODO: execute run statement
   }
   
-  async _get(stmt, binding_params) {
+  async _get(sqlStatement, binding_params) {
     // TODO: execute get statement
   }
 
-  async _all(stmt, binding_params) {
-    var result = await stmt.execute();
-    return result?.recordset || [];
+  async _all(sqlStatement, binding_params) {
+    // prepare sql statement
+    const stmt = new sql.PreparedStatement()
+    var parameters = {};
+
+    for(var i = 0; i < binding_params.length; i++){
+      var parameterKey = `p${i+1}`
+
+      stmt.input(parameterKey, sql.VarChar())
+      parameters[parameterKey] = binding_params[i]
+    }
+
+    await stmt.prepare(sqlStatement)
+
+    // execute query
+    var result = await stmt.execute(parameters);
+
+    // close connection return selected values
+    await stmt.unprepare()
+    return result?.recordset || []
   }
 
-  async _stream(stmt, binding_params, one) {
+  async _stream(sqlStatement, binding_params, one) {
     // TODO: execute stream request
   }
 
