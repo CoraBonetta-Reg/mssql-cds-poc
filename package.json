@@ -1,0 +1,44 @@
+{
+  "name": "mssql-cds-poc",
+  "version": "1.0.0",
+  "description": "A simple CAP project.",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^7",
+    "express": "^4",
+    "mssql": "^10.0.2"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^1"
+  },
+  "scripts": {
+    "start": "cds-serve"
+  },
+  "cds": {
+    "requires": {
+      "db":{
+        "kind": "mssql",
+        "credentials": {
+          "user": "cds-test",
+          "password": "cds-test",
+          "database": "cds-test",
+          "server": "localhost\\SQLEXPRESS",
+          "pool": {
+            "max": 10,
+            "min": 0,
+            "idleTimeoutMillis": 30000
+          },
+          "options": {
+            "encrypt": true,
+            "trustServerCertificate": true
+          }
+        }
+      },
+      "mssql": {
+        "impl": "mssql/index.js/"
+      }
+    }
+  }
+}
