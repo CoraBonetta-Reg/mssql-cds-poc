@@ -1,7 +1,19 @@
 const { SQLService } = require('@cap-js/db-service')
 
+// const remapping from base service
+const ObjectKeys = o => (o && [...ObjectKeys(o.__proto__), ...Object.keys(o)]) || []
+const _managed = {
+  '$user.id': '$user.id',
+  $user: '$user.id',
+  $now: '$now',
+}
+
+const is_regexp = x => x?.constructor?.name === 'RegExp' // NOTE: x instanceof RegExp doesn't work in repl
+const _empty = a => !a || a.length === 0
+
 class CQN2MSSQL extends SQLService.CQN2SQL {
 
+    
     // override select for MSSQL
     SELECT(q) {
         const _empty = a => !a || a.length === 0
@@ -88,6 +100,101 @@ class CQN2MSSQL extends SQLService.CQN2SQL {
 
         var index = this.values.push(val)
         return `@p${index}`
+      }
+
+    // insert entries override
+    INSERT_entries(q) {
+        const { INSERT } = q
+        const entity = this.name(q.target?.name || INSERT.into.ref[0])
+        const alias = INSERT.into.as
+        const elements = q.elements || q.target?.elements
+        if (!elements && !INSERT.entries?.length) {
+          return // REVISIT: mtx sends an insert statement without entries and no reference entity
+        }
+        const columns = elements
+          ? ObjectKeys(elements).filter(c => c in elements && !elements[c].virtual && !elements[c].value && !elements[c].isAssociation)
+          : ObjectKeys(INSERT.entries[0])
+    
+        /** @type {string[]} */
+        this.columns = columns.filter(elements ? c => !elements[c]?.['@cds.extension'] : () => true).map(c => this.quote(c))
+    
+        const extractions = this.managed(
+          columns.map(c => ({ name: c })),
+          elements,
+          !!q.UPSERT,
+        )
+
+        const extraction = extractions
+          .filter(a => a)
+          .map(c => `${c.name} ${c.type} '${c.sql}'`)
+          .join(',')
+
+        this.entries = [[...this.values, JSON.stringify(INSERT.entries)]]
+        return (this.sql = `INSERT INTO ${this.quote(entity)}${alias ? ' as ' + this.quote(alias) : ''} (${this.columns
+          }) SELECT * FROM OPENJSON(@p1) WITH (${extraction})`)
+      }
+
+      // managed override, json syntax is a bit different during insert/update
+      managed(columns, elements, isUpdate = false) {
+        const annotation = isUpdate ? '@cds.on.update' : '@cds.on.insert'
+        const { _convertInput } = this.class
+        // Ensure that missing managed columns are added
+        const requiredColumns = !elements
+          ? []
+          : Object.keys(elements)
+            .filter(
+              e =>
+                (elements[e]?.[annotation] || (!isUpdate && elements[e]?.default && !elements[e].virtual && !elements[e].isAssociation)) &&
+                !columns.find(c => c.name === e),
+            )
+            .map(name => ({ name, sql: 'NULL' }))
+    
+        return [...columns, ...requiredColumns].map(({ name, sql }) => {
+          let element = elements?.[name] || {}
+          if (!sql) sql = `$.${name}`
+    
+          let converter = element[_convertInput]
+          if (converter && sql[0] !== '$') sql = converter(sql, element)
+    
+          let val = _managed[element[annotation]?.['=']]
+          if (val) sql = `coalesce(${sql}, ${this.func({ func: 'session_context', args: [{ val, param: false }] })})`
+          else if (!isUpdate && element.default) {
+            const d = element.default
+            if (d.val !== undefined || d.ref?.[0] === '$now') {
+              // REVISIT: d.ref is not used afterwards
+              sql = `(CASE WHEN json_type(value,'$."${name}"') IS NULL THEN ${this.defaultValue(d.val) // REVISIT: this.defaultValue is a strange function
+                } ELSE ${sql} END)`
+            }
+          }
+          const type = this.type4(element)
+          return { name, sql, type }
+        })
+      }
+
+      // types determination
+      static TypeMap = {
+        // Utilizing cds.linked inheritance
+        UUID: e => `NVARCHAR(36)`,
+        String: e => `NVARCHAR(${e.length || 'MAX'})`,
+        Binary: e => `VARBINARY(${e.length || 'MAX'})`,
+        Int64: () => 'BIGINT',
+        Int32: () => 'INTEGER',
+        Int16: () => 'SMALLINT',
+        UInt8: () => 'SMALLINT',
+        Integer64: () => 'BIGINT',
+        LargeString: () => 'NCLOB',
+        LargeBinary: () => 'BLOB',
+        Association: () => false,
+        Composition: () => false,
+        array: () => 'NCLOB',
+      }
+
+      type4(element) {
+        if (!element._type) element = cds.builtin.types[element.type] || element
+        const fn = element[this.class._sqlType]
+        return (
+          fn?.(element) || element._type?.replace('cds.', '').toUpperCase() || cds.error`Unsupported type: ${element.type}`
+        )
       }
 }
 
