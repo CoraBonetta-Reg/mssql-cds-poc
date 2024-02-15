@@ -34,8 +34,8 @@ class MSSQLService extends SQLService {
     try {
       return {
         run: (..._) => this._run(sqlStatement, ..._),
-        get: (..._) => this._get(sqlStatement,..._),
-        all: (..._) => this._all(sqlStatement,..._),
+        get: (..._) => this._get(sqlStatement, ..._),
+        all: (..._) => this._all(sqlStatement, ..._),
         stream: (..._) => this._stream(sqlStatement, ..._),
       }
     } catch (e) {
@@ -45,32 +45,15 @@ class MSSQLService extends SQLService {
   }
 
   async _run(sqlStatement, binding_params) {
-    // TODO: execute run statement
+    var result = await this._internalExecute(sqlStatement, binding_params)
   }
-  
+
   async _get(sqlStatement, binding_params) {
     // TODO: execute get statement
   }
 
   async _all(sqlStatement, binding_params) {
-    // prepare sql statement
-    const stmt = new sql.PreparedStatement()
-    var parameters = {};
-
-    for(var i = 0; i < binding_params.length; i++){
-      var parameterKey = `p${i+1}`
-
-      stmt.input(parameterKey, sql.VarChar())
-      parameters[parameterKey] = binding_params[i]
-    }
-
-    await stmt.prepare(sqlStatement)
-
-    // execute query
-    var result = await stmt.execute(parameters);
-
-    // close connection return selected values
-    await stmt.unprepare()
+    var result = await this._internalExecute(sqlStatement, binding_params)
     return result?.recordset || []
   }
 
@@ -79,9 +62,36 @@ class MSSQLService extends SQLService {
   }
 
   async exec(sqlCommand) {
-    const ps = new sql.PreparedStatement()
-    await ps.prepare()
-    return await ps.execute(sqlCommand)
+    await this._internalExecute(sqlCommand, [])
+  }
+
+  async _internalExecute(sqlStatement, binding_params) {
+    try {
+      // prepare sql statement
+      const stmt = new sql.PreparedStatement()
+      var parameters = {};
+
+      for (var i = 0; i < binding_params.length; i++) {
+        var parameterKey = `p${i + 1}`
+
+        stmt.input(parameterKey, sql.VarChar())
+        parameters[parameterKey] = binding_params[i]
+      }
+
+      await stmt.prepare(sqlStatement)
+
+      // execute query
+      var result = await stmt.execute(parameters);
+
+      // unprepare and return
+      await stmt.unprepare()
+      return result;
+
+    }
+    catch (err) {
+      // error handling
+      return {}
+    }
   }
 
   static CQN2SQL = CQN2MSSQL
