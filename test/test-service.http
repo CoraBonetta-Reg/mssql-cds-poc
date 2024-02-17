@@ -18,5 +18,21 @@ Content-Type: application/json
     "CustomerName" : "CreationTest"
 }
 
+### PATCH edit existing entity ###
+PATCH  http://localhost:4004/odata/v4/test/Customer(0df955f1-80a6-40c1-815c-77deec6e409c)
+Content-Type: application/json
+
+{
+    "CustomerName" : "UpdateTest"
+}
+
+### PUT edit existing entity ###
+PUT  http://localhost:4004/odata/v4/test/Customer(0df955f1-80a6-40c1-815c-77deec6e409c)
+Content-Type: application/json
+
+{
+    "CustomerName" : "UpdateTestPut"
+}
+
 ### Delete existing entity ###
-DELETE  http://localhost:4004/odata/v4/test/Customer(34d4de95-063d-433b-a32a-ed4cf149bd21)
+DELETE  http://localhost:4004/odata/v4/test/Customer(f3c9314e-62e9-4986-be26-859348d36769)

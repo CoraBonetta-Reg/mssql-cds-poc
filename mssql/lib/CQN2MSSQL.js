@@ -132,6 +132,41 @@ class CQN2MSSQL extends SQLService.CQN2SQL {
           }) SELECT * FROM OPENJSON(@p1) WITH (${extraction})`)
       }
 
+      // update override
+      UPDATE(q) {
+        const { entity, with: _with, data, where } = q.UPDATE
+        const elements = q.target?.elements
+        const tableName = this.name(entity.ref?.[0] || entity)
+
+        let sql = `UPDATE ${entity.as || tableName}`
+    
+        let columns = []
+        if (data) _add(data, val => this.val({ val }))
+        if (_with) _add(_with, x => this.expr(x))
+        function _add(data, sql4) {
+          for (let c in data) {
+            if (!elements || (c in elements && !elements[c].virtual)) {
+              columns.push({ name: c, sql: sql4(data[c]) })
+            }
+          }
+        }
+    
+        columns = columns.map(c => {
+          if (q.elements?.[c.name]?.['@cds.extension']) return {
+            name: 'extensions__',
+            sql: `json_set(extensions__,${this.string('$."' + c.name + '"')},${c.sql})`,
+          }
+          return c
+        })
+    
+        const extraction = this.managed(columns, elements, true).map(c => `${this.quote(c.name)}=${c.sql}`)
+    
+        sql += ` SET ${extraction}`
+        if (entity.as) sql += ` FROM ${tableName} ${entity.as}`
+        if (where) sql += ` WHERE ${this.where(where)}`
+        return (this.sql = sql)
+      }
+
       // delete override
       DELETE({ DELETE: { from, where } }) {
         // clone object purging alias
