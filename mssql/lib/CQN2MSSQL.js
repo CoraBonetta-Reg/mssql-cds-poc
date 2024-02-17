@@ -11,9 +11,7 @@ const _managed = {
 const is_regexp = x => x?.constructor?.name === 'RegExp' // NOTE: x instanceof RegExp doesn't work in repl
 const _empty = a => !a || a.length === 0
 
-class CQN2MSSQL extends SQLService.CQN2SQL {
-
-    
+class CQN2MSSQL extends SQLService.CQN2SQL {  
     // override select for MSSQL
     SELECT(q) {
         const _empty = a => !a || a.length === 0
@@ -132,6 +130,17 @@ class CQN2MSSQL extends SQLService.CQN2SQL {
         this.entries = [[...this.values, JSON.stringify(INSERT.entries)]]
         return (this.sql = `INSERT INTO ${this.quote(entity)}${alias ? ' as ' + this.quote(alias) : ''} (${this.columns
           }) SELECT * FROM OPENJSON(@p1) WITH (${extraction})`)
+      }
+
+      // delete override
+      DELETE({ DELETE: { from, where } }) {
+        // clone object purging alias
+        var cleanFrom = Object.assign({}, from);
+        delete cleanFrom.as;
+
+        let sql = `DELETE ${this.from(cleanFrom)} FROM ${this.from(from)}`
+        if (where) sql += ` WHERE ${this.where(where)}`
+        return (this.sql = sql)
       }
 
       // managed override, json syntax is a bit different during insert/update

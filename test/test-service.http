@@ -10,10 +10,13 @@ GET http://localhost:4004/odata/v4/test/Customer?$filter=CustomerName eq 'prova 
 ### Get single by key ###
 GET http://localhost:4004/odata/v4/test/Customer(577aa687-6671-4025-b2ba-f1e7ae767ea4)
 
-### Create new entity ###
+### Create new entity ###   
 POST http://localhost:4004/odata/v4/test/Customer
 Content-Type: application/json
 
 {
     "CustomerName" : "CreationTest"
 }
+
+### Delete existing entity ###
+DELETE  http://localhost:4004/odata/v4/test/Customer(34d4de95-063d-433b-a32a-ed4cf149bd21)

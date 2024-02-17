@@ -10,8 +10,9 @@ class MSSQLService extends SQLService {
       options: { max: 1, ...this.options.pool },
       create: async tenant => {
         // TODO: tenant management
-        const dbc = await sql.connect(this.options.credentials)
-        return dbc
+        const pool = new sql.ConnectionPool(this.options.credentials)
+        await pool.connect()
+        return pool
       },
       destroy: dbc => dbc.close(),
       validate: dbc => dbc.open,
@@ -29,6 +30,27 @@ class MSSQLService extends SQLService {
     return super.release()
   }
 
+  /// TRANSACTION MANAGEMENT
+  async BEGIN() {
+    const transaction = new sql.Transaction(this.dbc)
+    await transaction.begin();
+
+    this.dbc[$session].transaction = transaction
+  }
+
+  async COMMIT() {
+    const transaction = this.dbc[$session].transaction
+    if (transaction)
+      await transaction.commit()
+  }
+
+  async ROLLBACK() {
+    const transaction = this.dbc[$session].transaction
+    if (transaction)
+      await transaction.rollback()
+  }
+
+  /// PREPARE AND EXECUTE STATEMENT
   async prepare(sqlStatement) {
     // TODO: all logic for mssql goes here
     try {
@@ -46,6 +68,9 @@ class MSSQLService extends SQLService {
 
   async _run(sqlStatement, binding_params) {
     var result = await this._internalExecute(sqlStatement, binding_params)
+    return {
+      changes: result?.rowsAffected[0]
+    }
   }
 
   async _get(sqlStatement, binding_params) {
@@ -62,36 +87,20 @@ class MSSQLService extends SQLService {
   }
 
   async exec(sqlCommand) {
-    await this._internalExecute(sqlCommand, [])
+    var commandFn = this[sqlCommand] || _internalExecute
+    await commandFn.bind(this)(sqlCommand)
   }
 
   async _internalExecute(sqlStatement, binding_params) {
-    try {
-      // prepare sql statement
-      const stmt = new sql.PreparedStatement()
-      var parameters = {};
+    // create request using transaction or pool
+    const request = new sql.Request(this.dbc[$session]?.transaction || this.dbc);
 
-      for (var i = 0; i < binding_params.length; i++) {
-        var parameterKey = `p${i + 1}`
+    for (var i = 0; i < binding_params.length; i++)
+      request.input(`p${i + 1}`, sql.VarChar(), binding_params[i])
 
-        stmt.input(parameterKey, sql.VarChar())
-        parameters[parameterKey] = binding_params[i]
-      }
-
-      await stmt.prepare(sqlStatement)
-
-      // execute query
-      var result = await stmt.execute(parameters);
-
-      // unprepare and return
-      await stmt.unprepare()
-      return result;
-
-    }
-    catch (err) {
-      // error handling
-      return {}
-    }
+    // execute query
+    var result = await request.query(sqlStatement)
+    return result
   }
 
   static CQN2SQL = CQN2MSSQL
