@@ -35,4 +35,4 @@ Content-Type: application/json
 }
 
 ### Delete existing entity ###
-DELETE  http://localhost:4004/odata/v4/test/Customer(f3c9314e-62e9-4986-be26-859348d36769)
+DELETE  http://localhost:4004/odata/v4/test/Customer(8c719899-42db-4503-8a6d-4f9405a4301b)

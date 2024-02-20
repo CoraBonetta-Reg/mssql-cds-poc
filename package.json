@@ -6,9 +6,9 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@lucabonetta-reg/cds-mssql": "^1.0.0",
     "@sap/cds": "^7",
-    "express": "^4",
-    "mssql": "^10.0.2"
+    "express": "^4"
   },
   "devDependencies": {
     "@cap-js/sqlite": "^1"
@@ -18,7 +18,7 @@
   },
   "cds": {
     "requires": {
-      "db":{
+      "db": {
         "kind": "mssql",
         "credentials": {
           "user": "cds-test",
@@ -37,7 +37,7 @@
         }
       },
       "mssql": {
-        "impl": "mssql/index.js/"
+        "impl": "@lucabonetta-reg/cds-mssql"
       }
     }
   }
