@@ -19,25 +19,10 @@
   "cds": {
     "requires": {
       "db": {
-        "kind": "mssql",
-        "credentials": {
-          "user": "cds-test",
-          "password": "cds-test",
-          "database": "cds-test",
-          "server": "localhost\\SQLEXPRESS",
-          "pool": {
-            "max": 10,
-            "min": 0,
-            "idleTimeoutMillis": 30000
-          },
-          "options": {
-            "encrypt": true,
-            "trustServerCertificate": true
-          }
+        "[development]": {
+          "kind": "mssql",
+          "impl": "@lucabonetta-reg/cds-mssql"
         }
-      },
-      "mssql": {
-        "impl": "@lucabonetta-reg/cds-mssql"
       }
     }
   }
