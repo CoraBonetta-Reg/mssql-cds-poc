@@ -1,38 +1,41 @@
-### Metadata request ###
+### Metadata request
 GET http://localhost:4004/odata/v4/test/$metadata
 
-### Get all from entity set ###
-GET http://localhost:4004/odata/v4/test/Customer
-
-### Get using filters ###
-GET http://localhost:4004/odata/v4/test/Customer?$filter=CustomerName eq 'prova 1' or CustomerName eq 'prova 3'
-
-### Get single by key ###
-GET http://localhost:4004/odata/v4/test/Customer(577aa687-6671-4025-b2ba-f1e7ae767ea4)
-
-### Create new entity ###   
+### Create new entity   
+# @name create
+# @prompt customername the customer name sent in the request
 POST http://localhost:4004/odata/v4/test/Customer
 Content-Type: application/json
 
 {
-    "CustomerName" : "CreationTest"
+    "CustomerName" : "{{customername}}"
 }
 
-### PATCH edit existing entity ###
-PATCH  http://localhost:4004/odata/v4/test/Customer(0df955f1-80a6-40c1-815c-77deec6e409c)
+### Read all from entity set
+GET http://localhost:4004/odata/v4/test/Customer
+
+### Read using filters
+GET http://localhost:4004/odata/v4/test/Customer?$filter=CustomerName eq 'prova 1' or CustomerName eq 'prova 3'
+
+### Read single by key
+GET http://localhost:4004/odata/v4/test/Customer({{create.response.body.ID}})
+
+
+### Update with PATCH
+PATCH  http://localhost:4004/odata/v4/test/Customer({{create.response.body.ID}})
 Content-Type: application/json
 
 {
     "CustomerName" : "UpdateTest"
 }
 
-### PUT edit existing entity ###
-PUT  http://localhost:4004/odata/v4/test/Customer(0df955f1-80a6-40c1-815c-77deec6e409c)
+### Update with PUT method
+PUT  http://localhost:4004/odata/v4/test/Customer({{create.response.body.ID}})
 Content-Type: application/json
 
 {
     "CustomerName" : "UpdateTestPut"
 }
 
-### Delete existing entity ###
-DELETE  http://localhost:4004/odata/v4/test/Customer(8c719899-42db-4503-8a6d-4f9405a4301b)
+### Delete entity
+DELETE  http://localhost:4004/odata/v4/test/Customer({{create.response.body.ID}})
