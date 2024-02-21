@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@lucabonetta-reg/cds-mssql": "^1.0.0",
+    "@lucabonetta-reg/cds-mssql": "^1.1.0",
     "@sap/cds": "^7",
     "express": "^4"
   },
